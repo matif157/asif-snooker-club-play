@@ -59,6 +59,39 @@ if (user_can('customers.manage')) $quickActions[] = ['/customers/create', 'New C
         </div>
     </div>
 
+    <!-- Quick Play -->
+    <?php if (!empty($tables)): ?>
+    <div class="card p-4 sm:p-5 fade-in">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2">
+                <h2 class="text-sm font-semibold text-white uppercase tracking-wider">Quick Play</h2>
+                <span class="text-[11px] text-slate-500">Press <kbd class="px-1 py-0.5 rounded bg-white/10 font-mono text-slate-300">Ctrl</kbd> + number anywhere</span>
+            </div>
+            <a href="/play" class="text-xs text-emerald-400 hover:text-emerald-300 font-medium">Play Board &rarr;</a>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <?php foreach ($tables as $i => $t): ?>
+                <?php
+                    $shortcut = $i < 9 ? ('Ctrl+' . ($i + 1))
+                        : ($i === 9 ? 'Ctrl+0'
+                        : ($i < 19 ? 'Ctrl+Shift+' . ($i - 9) : ''));
+                    $dot = $t['status'] === 'occupied' ? 'bg-emerald-400'
+                        : ($t['status'] === 'reserved' ? 'bg-indigo-400'
+                        : ($t['status'] === 'maintenance' ? 'bg-rose-400' : 'bg-slate-500'));
+                ?>
+                <a href="/play/<?= (int) $t['id'] ?>"
+                   class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition">
+                    <span class="w-2 h-2 rounded-full <?= $dot ?>"></span>
+                    <span class="text-sm text-white font-medium">#<?= e($t['number']) ?></span>
+                    <?php if ($shortcut !== ''): ?>
+                        <span class="text-[10px] text-slate-500 font-mono"><?= $shortcut ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- KPI Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 fade-in-stagger">
         <!-- Revenue -->

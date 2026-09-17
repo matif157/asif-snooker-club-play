@@ -70,6 +70,39 @@ function formatCurrency(amount) {
     return 'Rs ' + Number(amount).toLocaleString('en-PK', {maximumFractionDigits: 0});
 }
 
+// ── Global Play shortcuts ────────────────────────────────────────────
+// Ctrl+1..9  → tables 1..9
+// Ctrl+0     → table 10
+// Ctrl+Shift+1..9 → tables 11..19
+// Works on any CRM page; `CLUB_PLAY_TABLES` is provided by the app layout.
+document.addEventListener('keydown', (event) => {
+    if (!event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.repeat) return;
+
+    const target = event.target;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+        || target.tagName === 'SELECT' || target.isContentEditable)) {
+        return;
+    }
+
+    const match = /^Digit([0-9])$/.exec(event.code || '');
+    if (!match) return;
+
+    const digit = parseInt(match[1], 10);
+    const index = event.shiftKey
+        ? (digit >= 1 && digit <= 9 ? 9 + digit : -1)   // Ctrl+Shift+1 → 11th table
+        : (digit === 0 ? 9 : digit - 1);                // Ctrl+0 → 10th, Ctrl+1 → 1st
+
+    if (index < 0) return;
+
+    const tables = window.CLUB_PLAY_TABLES || [];
+    const table = tables[index];
+    if (!table) return;
+
+    event.preventDefault();
+    window.location.href = '/play/' + table.id;
+});
+
 // Dashboard live KPI updates (kpis: [data-revenue], [data-sessions], ...) —
 // lightweight polling, works on any hosting.
 document.addEventListener('DOMContentLoaded', () => {

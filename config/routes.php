@@ -10,6 +10,7 @@ use App\Controllers\DashboardController;
 use App\Controllers\ExpenseController;
 use App\Controllers\LoanController;
 use App\Controllers\PaymentController;
+use App\Controllers\PlayController;
 use App\Controllers\PortalController;
 use App\Controllers\ReminderController;
 use App\Controllers\ReportsController;
@@ -63,6 +64,10 @@ $router->get('/sessions/{id}', [SessionController::class, 'show']);
 $router->get('/sessions/{id}/invoice', [SessionController::class, 'invoice']);
 $router->post('/sessions/{id}/end', [SessionController::class, 'end']);
 $router->post('/sessions/{id}/logout', [SessionController::class, 'logout']);
+
+// Play mode (table-first floor view)
+$router->get('/play', [PlayController::class, 'index']);
+$router->get('/play/{id}', [PlayController::class, 'show']);
 
 // Bookings
 $router->get('/bookings', [BookingController::class, 'index']);
@@ -138,6 +143,8 @@ $router->post('/api/sessions/{id}/end', [SessionController::class, 'apiEnd']);
 $router->post('/api/sessions/{id}/charge', [SessionController::class, 'apiAddCharge']);
 $router->post('/api/sessions/{id}/discount', [SessionController::class, 'apiDiscount']);
 $router->post('/api/sessions/{id}/players', [SessionController::class, 'apiUpdatePlayers']);
+$router->post('/api/sessions/{id}/edit', [PlayController::class, 'apiEdit']);
+$router->get('/api/sessions/{id}/details', [PlayController::class, 'apiSession']);
 $router->post('/api/sessions/{id}/pay', [PaymentController::class, 'apiPay']);
 $router->get('/api/customers/search', [CustomerController::class, 'apiSearch']);
 $router->get('/api/dashboard/stats', [DashboardController::class, 'apiStats']);

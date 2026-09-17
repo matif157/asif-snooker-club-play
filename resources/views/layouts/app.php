@@ -83,6 +83,12 @@ $currentPage = basename($_SERVER['REQUEST_URI'] ?? '/');
 <!-- Unauthenticated — direct page content, no layout chrome -->
 <?= $content ?>
 <?php endif; ?>
+<script>
+    window.CLUB_PLAY_TABLES = <?= json_encode(array_map(
+        fn($t) => ['id' => (int) $t['id'], 'number' => (string) $t['number']],
+        \App\Models\Table::activeTables()
+    ), JSON_UNESCAPED_UNICODE) ?>;
+</script>
 <script src="/assets/js/app.js"></script>
 <script src="/assets/js/tables.js"></script>
 </body>

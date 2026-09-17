@@ -39,6 +39,12 @@ $isActive = fn(string $path) => str_starts_with($uri, $path) || $uri === $path ?
             Tables
         </a>
 
+        <a href="/play" class="nav-item <?php if (str_starts_with($uri, '/play')) echo 'active'; ?>">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z"/></svg>
+            Play
+            <span class="ml-auto text-[10px] font-mono text-slate-500 bg-white/5 border border-white/[0.08] rounded px-1.5 py-0.5">Ctrl+1</span>
+        </a>
+
         <a href="/sessions" class="nav-item <?php if (str_starts_with($uri, '/sessions')) echo 'active'; ?>">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Sessions

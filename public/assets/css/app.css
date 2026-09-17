@@ -293,6 +293,56 @@ a:focus-visible {
 .card  { background: #131824; border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; transition: border-color .2s, box-shadow .2s; }
 .card:hover { border-color: rgba(255,255,255,0.11); box-shadow: 0 8px 30px rgba(0,0,0,0.18); }
 
+/* ── Play sheet (spreadsheet-style form) ─────────────────────────── */
+.sheet {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+}
+.sheet th,
+.sheet td {
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0;
+    vertical-align: middle;
+}
+.sheet th {
+    background: rgba(255,255,255,0.035);
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #94a3b8;
+    padding: 10px 12px;
+    width: 34%;
+    white-space: nowrap;
+}
+.sheet td { background: rgba(11,14,20,0.35); }
+.sheet tr:nth-child(even) th { background: rgba(255,255,255,0.02); }
+.sheet .cell-input,
+.sheet .cell-static {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: 0;
+    color: #fff;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+.sheet textarea.cell-input { resize: vertical; min-height: 38px; }
+.sheet .cell-input:focus {
+    outline: none;
+    background: color-mix(in srgb, var(--a-500, #10b981) 7%, transparent);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--a-500, #10b981) 40%, transparent);
+}
+.sheet .cell-input:disabled { color: #cbd5e1; opacity: 1; cursor: default; -webkit-text-fill-color: #cbd5e1; }
+.sheet select.cell-input { appearance: none; }
+.sheet .cell-hint { display: block; padding: 0 12px 8px; font-size: 11px; color: #64748b; }
+
 /* Timer flash */
 @keyframes timerPulse {
     0%,100% { opacity: 1; }
