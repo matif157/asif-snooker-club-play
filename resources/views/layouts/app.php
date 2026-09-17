@@ -84,7 +84,7 @@ $currentPage = basename($_SERVER['REQUEST_URI'] ?? '/');
 <?= $content ?>
 <?php endif; ?>
 <script>
-    window.CLUB_PLAY_TABLES = <?= json_encode(array_map(
+    window.CLUB_TABLES = <?= json_encode(array_map(
         fn($t) => ['id' => (int) $t['id'], 'number' => (string) $t['number']],
         \App\Models\Table::activeTables()
     ), JSON_UNESCAPED_UNICODE) ?>;

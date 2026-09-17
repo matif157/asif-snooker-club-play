@@ -70,11 +70,11 @@ function formatCurrency(amount) {
     return 'Rs ' + Number(amount).toLocaleString('en-PK', {maximumFractionDigits: 0});
 }
 
-// ── Global Play shortcuts ────────────────────────────────────────────
+// ── Global table shortcuts ───────────────────────────────────────────
 // Ctrl+1..9  → tables 1..9
 // Ctrl+0     → table 10
 // Ctrl+Shift+1..9 → tables 11..19
-// Works on any CRM page; `CLUB_PLAY_TABLES` is provided by the app layout.
+// Works on any CRM page; `CLUB_TABLES` is provided by the app layout.
 document.addEventListener('keydown', (event) => {
     if (!event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.repeat) return;
@@ -95,12 +95,12 @@ document.addEventListener('keydown', (event) => {
 
     if (index < 0) return;
 
-    const tables = window.CLUB_PLAY_TABLES || [];
+    const tables = window.CLUB_TABLES || [];
     const table = tables[index];
     if (!table) return;
 
     event.preventDefault();
-    window.location.href = '/play/' + table.id;
+    window.location.href = '/tables?table=' + table.id;
 });
 
 // Dashboard live KPI updates (kpis: [data-revenue], [data-sessions], ...) —

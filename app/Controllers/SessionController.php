@@ -366,6 +366,120 @@ class SessionController extends Controller
         Response::success(['session' => $session->toArray()], 'Players updated');
     }
 
+    /**
+     * Patch the editable fields of a live session. Only the fields that are
+     * actually sent are touched, so partial saves are safe.
+     */
+    public function apiEdit(int $id): void
+    {
+        if (!user_can('sessions.manage')) {
+            Response::error('Forbidden', 403);
+        }
+
+        $session = ClubSession::find($id);
+        if (!$session || in_array($session->status, ['completed', 'cancelled'], true)) {
+            Response::error('Session not found or already closed', 404);
+        }
+
+        $patch  = [];
+        $before = $session->toArray();
+
+        foreach (['player_winner', 'player_loser', 'client_name'] as $field) {
+            if (Request::input($field) !== null) {
+                $val = trim((string) Request::input($field));
+                $patch[$field] = $val !== '' ? $val : null;
+            }
+        }
+
+        if (Request::input('players_count') !== null) {
+            $patch['players_count'] = max(1, (int) Request::input('players_count'));
+        }
+
+        if (Request::input('notes') !== null) {
+            $notes = trim((string) Request::input('notes'));
+            $patch['notes'] = $notes !== '' ? $notes : null;
+        }
+
+        if (Request::input('charge_type') !== null) {
+            $chargeType = (string) Request::input('charge_type');
+            $patch['charge_type'] = in_array($chargeType, [ClubSession::CHARGE_TIMER, ClubSession::CHARGE_FIXED], true)
+                ? $chargeType
+                : ClubSession::CHARGE_TIMER;
+        }
+
+        if (Request::input('fixed_amount') !== null) {
+            $fixed = round((float) Request::input('fixed_amount'), 2);
+            $effectiveType = $patch['charge_type'] ?? ($session->charge_type ?: ClubSession::CHARGE_TIMER);
+            if ($effectiveType === ClubSession::CHARGE_FIXED && $fixed <= 0) {
+                Response::error('Fixed amount must be greater than zero.');
+            }
+            $patch['fixed_amount'] = $effectiveType === ClubSession::CHARGE_FIXED ? $fixed : null;
+        }
+
+        if (Request::input('rate_type') !== null) {
+            $resolved = \App\Services\RateService::resolveRate(
+                (string) Request::input('rate_type'),
+                TableModel::find((int) $session->table_id)?->toArray() ?? []
+            );
+            $patch['rate_type'] = $resolved['rate_type'];
+            $patch['rate']      = $resolved['rate'];
+        }
+
+        if (Request::input('expected_end_time') !== null) {
+            $patch['expected_end_time'] = $this->normaliseDateTime((string) Request::input('expected_end_time'));
+        }
+
+        if (Request::input('payment_method') !== null) {
+            $patch['payment_method'] = \App\Models\Payment::normalizeMethod(Request::input('payment_method'));
+        }
+
+        // Client phone → attach (or create) a customer so udhaar stays traceable.
+        if (Request::input('client_phone') !== null) {
+            $phone = trim((string) Request::input('client_phone'));
+            if ($phone !== '') {
+                $existing = Customer::findByPhone($phone);
+                if ($existing) {
+                    $patch['customer_id'] = (int) $existing['id'];
+                    if (empty($patch['client_name'])) {
+                        $patch['client_name'] = $existing['name'];
+                    }
+                } else {
+                    $name = trim((string) (Request::input('client_name') ?? $session->client_name ?? ''));
+                    $patch['customer_id'] = Customer::create([
+                        'name'       => $name !== '' ? $name : ('Walk-in ' . $phone),
+                        'phone'      => Customer::normalizePhone($phone),
+                        'category'   => 'regular',
+                        'status'     => 'active',
+                        'created_at' => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            }
+        }
+
+        if ($patch === []) {
+            Response::error('Nothing to update');
+        }
+
+        $session->update($patch);
+
+        \App\Services\AuditService::log('session_edited', 'session', $id, $before, $patch);
+
+        Response::success(['session' => $session->toArray()], 'Session updated');
+    }
+
+    /**
+     * Full details for a single session (joined table/customer/staff + paid total).
+     */
+    public function apiDetails(int $id): void
+    {
+        $session = ClubSession::withDetails($id);
+        if (!$session) {
+            Response::error('Session not found', 404);
+        }
+
+        Response::success(['session' => $session]);
+    }
+
     public function apiEnd(int $id): void
     {
         if (!user_can('sessions.manage')) {

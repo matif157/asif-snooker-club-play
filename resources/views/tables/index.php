@@ -74,7 +74,9 @@ $maintenanceCount = count(array_filter($tables, fn($t) => $t['status'] === 'main
             <div class="table-tile <?= $tileClass ?> group relative"
                  data-table-id="<?= (int) $table['id'] ?>"
                  data-status="<?= e($status) ?>"
+                 data-hourly-rate="<?= (float) $table['hourly_rate'] ?>"
                  <?php if ($isOccupied && $session): ?>
+                     data-session-id="<?= (int) $session['id'] ?>"
                      data-start-time="<?= e($session['start_time'] ?? '') ?>"
                      data-paused-total="<?= (int) ($session['paused_total_sec'] ?? 0) ?>"
                      data-session-status="<?= e($session['status'] ?? '') ?>"
@@ -330,6 +332,12 @@ $maintenanceCount = count(array_filter($tables, fn($t) => $t['status'] === 'main
                             </td>
                             <td class="text-right">
                                 <div class="flex items-center justify-end gap-2">
+                                    <?php if (user_can('sessions.manage')): ?>
+                                    <button class="btn-secondary !py-1.5 !px-3 !text-[11px]"
+                                            onclick="editSession(<?= (int) $sess['id'] ?>)">
+                                        Edit
+                                    </button>
+                                    <?php endif; ?>
                                     <button class="btn-danger !py-1.5 !px-3 !text-[11px]"
                                             onclick="endSession(<?= (int) $sess['id'] ?>, <?= (int) $sess['table_id'] ?>)">
                                         End Session
@@ -630,6 +638,147 @@ $maintenanceCount = count(array_filter($tables, fn($t) => $t['status'] === 'main
         </div>
     </div>
 
+    <!-- ── Edit Live Session Modal ───────────────────────────────── -->
+    <div x-show="showEditModal" x-cloak
+         class="modal-overlay"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click.self="showEditModal = false"
+         @keydown.escape.window="showEditModal = false">
+
+        <div class="modal-card max-w-2xl"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+             @click.stop>
+
+            <div class="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+                <div>
+                    <h3 class="text-base font-semibold text-white">Edit Session</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Table <span class="text-emerald-400 font-semibold" x-text="'#' + editTableNumber"></span></p>
+                </div>
+                <button type="button" @click="showEditModal = false" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <form @submit.prevent="submitEditSession()" class="p-6 space-y-5">
+                <div x-show="editLoading" class="text-sm text-slate-400">Loading…</div>
+
+                <div x-show="!editLoading" class="space-y-5">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2">Winner</label>
+                            <input type="text" x-model="editWinner" placeholder="Winning player"
+                                   class="w-full bg-ink-800 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 px-4 py-2.5 focus:ring-2 focus:ring-emerald-500/50 focus:outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2">Loser</label>
+                            <input type="text" x-model="editLoser" placeholder="Losing player"
+                                   class="w-full bg-ink-800 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 px-4 py-2.5 focus:ring-2 focus:ring-emerald-500/50 focus:outline-none transition">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2">Client Name</label>
+                            <input type="text" x-model="editClient" placeholder="Who is paying?"
+                                   class="w-full bg-ink-800 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 px-4 py-2.5 focus:ring-2 focus:ring-emerald-500/50 focus:outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2">Phone <span class="text-slate-600">(for udhaar)</span></label>
+                            <input type="tel" x-model="editPhone" placeholder="03xx-xxxxxxx"
+                                   class="w-full bg-ink-800 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 px-4 py-2.5 focus:ring-2 focus:ring-emerald-500/50 focus:outline-none transition">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2">Players</label>
+                            <select x-model="editPlayers"
+                                    class="w-full bg-ink-800 border border-white/10 rounded-xl text-sm text-white px-4 py-2.5 focus:ring-2 focus:ring-emerald-500/50 focus:outline-none transition appearance-none">
+                                <option value="1">1 Player</option>
+                                <option value="2">2 Players</option>
+                                <option value="3">3 Players</option>
+                                <option value="4">4 Players</option>
+                                <option value="5">5 Players</option>
+                                <option value="6">6 Players</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2">Payment Method</label>
+                            <select x-model="editMethod"
+                                    class="w-full bg-ink-800 border border-white/10 rounded-xl text-sm text-white px-4 py-2.5 focus:ring-2 focus:ring-emerald-500/50 focus:outline-none transition appearance-none">
+                                <?php foreach (\App\Models\Payment::METHODS as $key => $label): ?>
+                                    <option value="<?= e($key) ?>"><?= e($label) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-2">Charge Mode</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" @click="editChargeType = 'timer'"
+                                    :class="editChargeType === 'timer' ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300' : 'border-white/10 text-slate-400 hover:text-white'"
+                                    class="rounded-xl border px-4 py-2.5 text-sm font-medium transition">Live Timer</button>
+                            <button type="button" @click="editChargeType = 'fixed'"
+                                    :class="editChargeType === 'fixed' ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300' : 'border-white/10 text-slate-400 hover:text-white'"
+                                    class="rounded-xl border px-4 py-2.5 text-sm font-medium transition">Fixed Amount</button>
+                        </div>
+                    </div>
+
+                    <div x-show="editChargeType === 'fixed'" x-cloak>
+                        <label class="block text-xs font-medium text-slate-400 mb-2">Fixed Amount (Rs) *</label>
+                        <input type="number" x-model.number="editFixed" step="1" min="0" placeholder="0"
+                               class="w-full bg-ink-800 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 px-4 py-2.5 focus:ring-2 focus:ring-emerald-500/50 focus:outline-none transition">
+                    </div>
+
+                    <div x-show="editChargeType !== 'fixed'" x-cloak>
+                        <label class="block text-xs font-medium text-slate-400 mb-2">Rate Type</label>
+                        <select x-model="editRateType"
+                                class="w-full bg-ink-800 border border-white/10 rounded-xl text-sm text-white px-4 py-2.5 focus:ring-2 focus:ring-emerald-500/50 focus:outline-none transition appearance-none">
+                            <option value="hourly">Hourly</option>
+                            <option value="frame">Per Frame</option>
+                            <option value="peak">Peak Rate</option>
+                            <option value="off_peak">Off-Peak</option>
+                            <option value="vip">VIP Rate</option>
+                            <option value="night">Night Rate</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-2">Expected End <span class="text-slate-600">(optional)</span></label>
+                        <input type="datetime-local" x-model="editExpectedEnd"
+                               class="w-full bg-ink-800 border border-white/10 rounded-xl text-sm text-white px-4 py-2.5 focus:ring-2 focus:ring-emerald-500/50 focus:outline-none transition">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-2">Notes <span class="text-slate-600">(optional)</span></label>
+                        <textarea x-model="editNotes" rows="2" placeholder="Any notes..."
+                                  class="w-full bg-ink-800 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 px-4 py-2.5 focus:ring-2 focus:ring-emerald-500/50 focus:outline-none transition resize-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" @click="showEditModal = false" class="btn-secondary">Cancel</button>
+                    <button type="submit"
+                            class="btn-primary"
+                            :disabled="editSubmitting || editLoading"
+                            :class="{ 'opacity-50 cursor-not-allowed': editSubmitting || editLoading }">
+                        <svg x-show="editSubmitting" class="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        <span x-text="editSubmitting ? 'Saving...' : 'Save Changes'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>
 
 <script>
@@ -668,6 +817,24 @@ function tableCommandCenter(prefill) {
         endMethod: 'cash',
         endSubmitting: false,
 
+        // Edit Modal (live session)
+        showEditModal: false,
+        editSessionId: null,
+        editTableNumber: '',
+        editLoading: false,
+        editSubmitting: false,
+        editWinner: '',
+        editLoser: '',
+        editClient: '',
+        editPhone: '',
+        editPlayers: '1',
+        editChargeType: 'timer',
+        editFixed: 0,
+        editRateType: 'hourly',
+        editExpectedEnd: '',
+        editMethod: 'cash',
+        editNotes: '',
+
         init() {
             // Alpine binds `this` to the component here (unlike x-init, where it is the global scope).
             window.__tablesComp = this;
@@ -682,6 +849,102 @@ function tableCommandCenter(prefill) {
                     alert('No table is available to start a session right now.');
                 }
             }
+
+            // Deep link used by the global Ctrl+<number> shortcuts:
+            // /tables?table=<id> highlights the tile and opens the right modal.
+            const focusId = parseInt(new URLSearchParams(window.location.search).get('table') || '0', 10);
+            if (focusId > 0) this.focusTable(focusId);
+        },
+
+        focusTable(tableId) {
+            const tile = document.querySelector('[data-table-id="' + tableId + '"]');
+            if (!tile) return;
+
+            // Drop the ?table= param so a refresh doesn't re-open the modal.
+            if (window.history?.replaceState) window.history.replaceState({}, '', '/tables');
+
+            tile.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            tile.classList.add('ring-2', 'ring-emerald-400/70');
+            setTimeout(() => tile.classList.remove('ring-2', 'ring-emerald-400/70'), 2600);
+
+            const status = tile.dataset.status;
+            const number = tile.querySelector('.text-sm.font-bold')?.textContent?.replace('#', '').trim() || '';
+            const sessionId = parseInt(tile.dataset.sessionId || '0', 10);
+
+            if (status === 'available') {
+                this.openStartModal(tableId, number, parseFloat(tile.dataset.hourlyRate || '0') || 0);
+            } else if (status === 'occupied' && sessionId) {
+                this.openEditModal(sessionId, number);
+            }
+        },
+
+        async openEditModal(sessionId, tableNumber) {
+            this.editSessionId = sessionId;
+            if (tableNumber !== undefined) this.editTableNumber = tableNumber;
+            this.editLoading = true;
+            this.showEditModal = true;
+            try {
+                const res = await apiGet('/api/sessions/' + sessionId + '/details');
+                const s = res.data ? res.data.session : null;
+                if (!s) {
+                    alert('Could not load this session.');
+                    this.showEditModal = false;
+                } else {
+                    this.editTableNumber = s.table_number || this.editTableNumber;
+                    this.editWinner = s.player_winner || '';
+                    this.editLoser = s.player_loser || '';
+                    this.editClient = s.client_name || s.customer_name || '';
+                    this.editPhone = s.customer_phone || '';
+                    this.editPlayers = String(s.players_count || 1);
+                    this.editChargeType = (s.charge_type || 'timer') === 'fixed' ? 'fixed' : 'timer';
+                    this.editFixed = Number(s.fixed_amount || 0);
+                    this.editRateType = s.rate_type || 'hourly';
+                    this.editMethod = s.payment_method || 'cash';
+                    this.editExpectedEnd = s.expected_end_time
+                        ? String(s.expected_end_time).replace(' ', 'T').slice(0, 16) : '';
+                    this.editNotes = s.notes || '';
+                }
+            } catch (e) {
+                alert('Network error. Please try again.');
+                this.showEditModal = false;
+            }
+            this.editLoading = false;
+        },
+
+        async submitEditSession() {
+            const sessionId = parseInt(this.editSessionId, 10);
+            if (!Number.isInteger(sessionId) || sessionId <= 0) {
+                alert('Could not identify the session. Please refresh and try again.');
+                return;
+            }
+            if (this.editChargeType === 'fixed' && !(Number(this.editFixed) > 0)) {
+                alert('Fixed amount must be greater than zero.');
+                return;
+            }
+            this.editSubmitting = true;
+            try {
+                const result = await apiPost('/api/sessions/' + sessionId + '/edit', {
+                    player_winner: this.editWinner,
+                    player_loser: this.editLoser,
+                    client_name: this.editClient,
+                    client_phone: this.editPhone,
+                    players_count: parseInt(this.editPlayers),
+                    charge_type: this.editChargeType,
+                    fixed_amount: this.editChargeType === 'fixed' ? Number(this.editFixed) : 0,
+                    rate_type: this.editRateType,
+                    expected_end_time: this.editExpectedEnd,
+                    payment_method: this.editMethod,
+                    notes: this.editNotes
+                });
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert(result.message || 'Failed to save session');
+                }
+            } catch (e) {
+                alert('Network error. Please try again.');
+            }
+            this.editSubmitting = false;
         },
 
         async searchCustomers() {
@@ -854,6 +1117,12 @@ function endSession(sessionId, tableId) {
     const comp = tablesCommandComponent();
     if (!comp) { alert('Interactive controls failed to load — please refresh the page.'); return; }
     comp.endSession(sessionId, tableId);
+}
+
+function editSession(sessionId) {
+    const comp = tablesCommandComponent();
+    if (!comp) { alert('Interactive controls failed to load — please refresh the page.'); return; }
+    comp.openEditModal(sessionId);
 }
 
 // ── Live Timer System ──────────────────────────────────────────
