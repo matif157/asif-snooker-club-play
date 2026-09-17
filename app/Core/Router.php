@@ -120,11 +120,12 @@ class Router
 
         // Cast numeric route params to native types
         $args = array_map(function (string $value): mixed {
-            if (ctype_digit($value)) {
-                return (int) $value;
+            $trimmed = trim($value);
+            if (preg_match('/^[+-]?\d+$/', $trimmed)) {
+                return (int) $trimmed;
             }
-            if (is_numeric($value)) {
-                return (float) $value;
+            if (is_numeric($trimmed)) {
+                return (float) $trimmed;
             }
             return $value;
         }, $params);

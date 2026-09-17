@@ -162,10 +162,15 @@ class SessionController extends Controller
         $this->redirect('/tables');
     }
 
-    public function apiStart(int $id): void
+    public function apiStart(int|string $id): void
     {
         if (!user_can('sessions.manage')) {
             Response::error('Forbidden', 403);
+        }
+
+        $id = (int) $id;
+        if ($id <= 0) {
+            Response::error('Invalid table identifier', 400);
         }
 
         $table = TableModel::find($id);
@@ -480,10 +485,15 @@ class SessionController extends Controller
         Response::success(['session' => $session]);
     }
 
-    public function apiEnd(int $id): void
+    public function apiEnd(int|string $id): void
     {
         if (!user_can('sessions.manage')) {
             Response::error('Forbidden', 403);
+        }
+
+        $id = (int) $id;
+        if ($id <= 0) {
+            Response::error('Invalid session identifier', 400);
         }
 
         $session = \App\Models\ClubSession::find($id);
